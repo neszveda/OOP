@@ -103,10 +103,8 @@ class LegiTarsasag:
             raise ValueError("A megadott foglalás nem található!")
 
 
-# --- 2. ADATKEZELÉS (CSV) ---
-
+# Adatkezelés
 CSV_FILE = "jaratok.csv"
-
 
 def mentes_csv_be(tarsasag: LegiTarsasag):
     try:
@@ -127,6 +125,7 @@ def mentes_csv_be(tarsasag: LegiTarsasag):
 
 
 def adatok_betoltese() -> LegiTarsasag:
+    # Ha nincs CSV file legyen valami adat
     if not os.path.exists(CSV_FILE):
         t = LegiTarsasag("WizzAir")
         j1 = BelfoldiJarat("W6-101", "Budapest", "Debrecen", 200, "2026-10-10", "10:00", 15000)
@@ -161,7 +160,7 @@ def adatok_betoltese() -> LegiTarsasag:
     return tarsasag if tarsasag is not None else LegiTarsasag("Ismeretlen")
 
 
-# --- 3. GUI ---
+# Gui és csicsa
 
 class RepulojegyApp:
     def __init__(self, tk_root: tk.Tk, tarsasag: LegiTarsasag):
