@@ -6,162 +6,14 @@ import csv
 import os
 from typing import Optional, List
 
-
-# --- 1. BACKEND OSZTÁLYOK ---
-
-class Jarat(ABC):
-    def __init__(self, jaratszam: str, honnan: str, hova: str, tavolsag: int, datum: str, idopont: str, jegyar: int):
-        self.__jaratszam = jaratszam
-        self.__honnan = honnan
-        self.__hova = hova
-        self.__tavolsag = tavolsag
-        self.__datum = datum
-        self.__idopont = idopont
-        self.__jegyar = jegyar
-
-    @property
-    def jaratszam(self) -> str: return self.__jaratszam
-
-    @property
-    def honnan(self) -> str: return self.__honnan
-
-    @property
-    def hova(self) -> str: return self.__hova
-
-    @property
-    def tavolsag(self) -> int: return self.__tavolsag
-
-    @property
-    def datum(self) -> str: return self.__datum
-
-    @property
-    def idopont(self) -> str: return self.__idopont
-
-    @property
-    def jegyar(self) -> int: return self.__jegyar
-
-    @property
-    def indulas_ideje(self) -> datetime:
-        return datetime.strptime(f"{self.__datum} {self.__idopont}", "%Y-%m-%d %H:%M")
-
-    @abstractmethod
-    def __str__(self) -> str:
-        return f"{self.__jaratszam}: {self.__honnan} -> {self.__hova} | {self.__datum} {self.__idopont} | {self.__jegyar} HUF"
-
-
-class BelfoldiJarat(Jarat):
-    def __str__(self) -> str:
-        return f"[Belföldi] " + super().__str__()
-
-
-class NemzetkoziJarat(Jarat):
-    def __str__(self) -> str:
-        return f"[Nemzetközi] " + super().__str__()
-
-
-class JegyFoglalas:
-    def __init__(self, foglalas_id: str, jarat: Jarat, utas_neve: str):
-        self.__foglalas_id = foglalas_id
-        self.__jarat = jarat
-        self.__utas_neve = utas_neve
-
-    @property
-    def foglalas_id(self) -> str: return self.__foglalas_id
-
-    @property
-    def jarat(self) -> Jarat: return self.__jarat
-
-    @property
-    def utas_neve(self) -> str: return self.__utas_neve
-
-
-class LegiTarsasag:
-    def __init__(self, nev: str):
-        self.__nev = nev
-        self.__jaratok: List[Jarat] = []
-        self.__foglalasok: List[JegyFoglalas] = []
-
-    @property
-    def nev(self) -> str: return self.__nev
-
-    @property
-    def jaratok(self) -> List[Jarat]: return self.__jaratok
-
-    @property
-    def foglalasok(self) -> List[JegyFoglalas]: return self.__foglalasok
-
-    def jarat_hozzaadasa(self, jarat: Jarat):
-        self.__jaratok.append(jarat)
-
-    def foglalas_hozzaadasa(self, foglalas: JegyFoglalas):
-        self.__foglalasok.append(foglalas)
-
-    def foglalas_torlese(self, foglalas_id: str):
-        eredeti_hossz = len(self.__foglalasok)
-        self.__foglalasok = [f for f in self.__foglalasok if f.foglalas_id != foglalas_id]
-        if len(self.__foglalasok) == eredeti_hossz:
-            raise ValueError("A megadott foglalás nem található!")
-
-
-# Adatkezelés
-CSV_FILE = "jaratok.csv"
-
-def mentes_csv_be(tarsasag: LegiTarsasag):
-    try:
-        with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(
-                ["Tipus", "ID", "Jaratszam", "Honnan", "Hova", "Tavolsag", "Datum", "Idopont", "Jegyar", "Utas"])
-            writer.writerow(["Legitarsasag", tarsasag.nev, "", "", "", "", "", "", "", ""])
-            for j in tarsasag.jaratok:
-                tipus = "Jarat_B" if isinstance(j, BelfoldiJarat) else "Jarat_N"
-                writer.writerow(
-                    [tipus, "", j.jaratszam, j.honnan, j.hova, j.tavolsag, j.datum, j.idopont, j.jegyar, ""])
-            for f_obj in tarsasag.foglalasok:
-                writer.writerow(
-                    ["Foglalas", f_obj.foglalas_id, f_obj.jarat.jaratszam, "", "", "", "", "", "", f_obj.utas_neve])
-    except Exception as e:
-        print(f"Hiba a mentés során: {e}")
-
-
-def adatok_betoltese() -> LegiTarsasag:
-    # Ha nincs CSV file legyen valami adat
-    if not os.path.exists(CSV_FILE):
-        t = LegiTarsasag("WizzAir")
-        j1 = BelfoldiJarat("W6-101", "Budapest", "Debrecen", 200, "2026-10-10", "10:00", 15000)
-        j2 = NemzetkoziJarat("W6-202", "Budapest", "London", 1500, "2026-11-12", "14:30", 45000)
-        t.jarat_hozzaadasa(j1)
-        t.jarat_hozzaadasa(j2)
-        t.foglalas_hozzaadasa(JegyFoglalas("F1", j1, "Kovács Péter"))
-        mentes_csv_be(t)
-        return t
-
-    tarsasag: Optional[LegiTarsasag] = None
-    try:
-        with open(CSV_FILE, mode='r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            temp_jaratok = {}
-            for row in reader:
-                if row["Tipus"] == "Legitarsasag":
-                    tarsasag = LegiTarsasag(row["ID"])
-                elif row["Tipus"] in ["Jarat_B", "Jarat_N"] and tarsasag is not None:
-                    cls = BelfoldiJarat if row["Tipus"] == "Jarat_B" else NemzetkoziJarat
-                    j = cls(row["Jaratszam"], row["Honnan"], row["Hova"], int(row["Tavolsag"]), row["Datum"],
-                            row["Idopont"], int(row["Jegyar"]))
-                    tarsasag.jarat_hozzaadasa(j)
-                    temp_jaratok[j.jaratszam] = j
-                elif row["Tipus"] == "Foglalas" and tarsasag is not None:
-                    jarat = temp_jaratok.get(row["Jaratszam"])
-                    if jarat:
-                        tarsasag.foglalas_hozzaadasa(JegyFoglalas(row["ID"], jarat, row["Utas"]))
-    except Exception as e:
-        print(f"Betöltési hiba: {e}")
-
-    return tarsasag if tarsasag is not None else LegiTarsasag("Ismeretlen")
+from jarat import Jarat
+from jaratok import BelfoldiJarat, NemzetkoziJarat
+from jegyfoglalas import JegyFoglalas
+from legitarsasag import LegiTarsasag
+# from foglalas_app import RepulojegyApp
 
 
 # Gui és csicsa
-
 class RepulojegyApp:
     def __init__(self, tk_root: tk.Tk, tarsasag: LegiTarsasag):
         self.root = tk_root
@@ -171,6 +23,7 @@ class RepulojegyApp:
         self.root.protocol("WM_DELETE_WINDOW", self.kilepes_es_mentes)
 
         # Példányváltozók deklarálása a warningok elkerüléséhez
+        # pyCharm hiszti
         self.datum_szuro: Optional[ttk.Combobox] = None
         self.jarat_listbox: Optional[tk.Listbox] = None
         self.utas_nev_entry: Optional[tk.Entry] = None
@@ -273,6 +126,62 @@ class RepulojegyApp:
     def kilepes_es_mentes(self):
         mentes_csv_be(self.tarsasag)
         self.root.destroy()
+
+# Adatkezelés
+CSV_FILE = "jaratok.csv"
+
+def mentes_csv_be(tarsasag: LegiTarsasag):
+    try:
+        with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                ["Tipus", "ID", "Jaratszam", "Honnan", "Hova", "Tavolsag", "Datum", "Idopont", "Jegyar", "Utas"])
+            writer.writerow(["Legitarsasag", tarsasag.nev, "", "", "", "", "", "", "", ""])
+            for j in tarsasag.jaratok:
+                tipus = "Jarat_B" if isinstance(j, BelfoldiJarat) else "Jarat_N"
+                writer.writerow(
+                    [tipus, "", j.jaratszam, j.honnan, j.hova, j.tavolsag, j.datum, j.idopont, j.jegyar, ""])
+            for f_obj in tarsasag.foglalasok:
+                writer.writerow(
+                    ["Foglalas", f_obj.foglalas_id, f_obj.jarat.jaratszam, "", "", "", "", "", "", f_obj.utas_neve])
+    except Exception as e:
+        print(f"Hiba a mentés során: {e}")
+
+
+def adatok_betoltese() -> LegiTarsasag:
+    # Ha nincs CSV file legyen valami adat
+    if not os.path.exists(CSV_FILE):
+        t = LegiTarsasag("WizzAir")
+        j1 = BelfoldiJarat("W6-101", "Budapest", "Debrecen", 200, "2026-10-10", "10:00", 15000)
+        j2 = NemzetkoziJarat("W6-202", "Budapest", "London", 1500, "2026-11-12", "14:30", 45000)
+        t.jarat_hozzaadasa(j1)
+        t.jarat_hozzaadasa(j2)
+        t.foglalas_hozzaadasa(JegyFoglalas("F1", j1, "Kovács Péter"))
+        mentes_csv_be(t)
+        return t
+
+    tarsasag: Optional[LegiTarsasag] = None
+    try:
+        with open(CSV_FILE, mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            temp_jaratok = {}
+            for row in reader:
+                if row["Tipus"] == "Legitarsasag":
+                    tarsasag = LegiTarsasag(row["ID"])
+                elif row["Tipus"] in ["Jarat_B", "Jarat_N"] and tarsasag is not None:
+                    cls = BelfoldiJarat if row["Tipus"] == "Jarat_B" else NemzetkoziJarat
+                    j = cls(row["Jaratszam"], row["Honnan"], row["Hova"], int(row["Tavolsag"]), row["Datum"],
+                            row["Idopont"], int(row["Jegyar"]))
+                    tarsasag.jarat_hozzaadasa(j)
+                    temp_jaratok[j.jaratszam] = j
+                elif row["Tipus"] == "Foglalas" and tarsasag is not None:
+                    jarat = temp_jaratok.get(row["Jaratszam"])
+                    if jarat:
+                        tarsasag.foglalas_hozzaadasa(JegyFoglalas(row["ID"], jarat, row["Utas"]))
+    except Exception as e:
+        print(f"Betöltési hiba: {e}")
+
+    return tarsasag if tarsasag is not None else LegiTarsasag("Ismeretlen")
 
 
 def main():
