@@ -10,7 +10,6 @@ from jarat import Jarat
 from jaratok import BelfoldiJarat, NemzetkoziJarat
 from jegyfoglalas import JegyFoglalas
 from legitarsasag import LegiTarsasag
-# from foglalas_app import RepulojegyApp
 
 
 # Gui és csicsa
