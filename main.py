@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from abc import ABC, abstractmethod
 from datetime import datetime
 import csv
 import os
@@ -150,7 +149,7 @@ def mentes_csv_be(tarsasag: LegiTarsasag):
 def adatok_betoltese() -> LegiTarsasag:
     # Ha nincs CSV file legyen valami adat
     if not os.path.exists(CSV_FILE):
-        t = LegiTarsasag("WizzAir")
+        t = LegiTarsasag("WizzardAir")
         j1 = BelfoldiJarat("W6-101", "Budapest", "Debrecen", 200, "2026-10-10", "10:00", 15000)
         j2 = NemzetkoziJarat("W6-202", "Budapest", "London", 1500, "2026-11-12", "14:30", 45000)
         t.jarat_hozzaadasa(j1)

@@ -1,5 +1,5 @@
 Tipus,ID,Jaratszam,Honnan,Hova,Tavolsag,Datum,Idopont,Jegyar,Utas
-Legitarsasag,WizzAir,,,,,,,,
+Legitarsasag,Wizzard_Lizard_Air,,,,,,,,
 Jarat_B,,W6-101,Budapest,Debrecen,200,2026-10-10,10:00,15000,
 Jarat_B,,W6-111,Budapest,Taktaharkány-alsó,200,2027-18-01,11:11,13593,
 Jarat_N,,W6-202,Budapest,London,1500,2026-11-12,14:30,45000,
@@ -13,3 +13,4 @@ Foglalas,F6,W6-303,,,,,,,Farkas Zoltán
 Foglalas,F106,W6-202,,,,,,,Sztrófa Kata
 Foglalas,F107,W6-111,,,,,,,Döbdrögi
 Foglalas,F108,W6-303,,,,,,,Libás Mátyás
+Foglalas,F109,W6-101,,,,,,,Lapos Elemér
