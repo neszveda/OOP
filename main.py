@@ -17,7 +17,7 @@ class RepulojegyApp:
         self.root = tk_root
         self.tarsasag = tarsasag
         self.root.title(f"{self.tarsasag.nev} - Foglalási Rendszer")
-        self.root.geometry("600x600")
+        self.root.geometry("600x1000")
         self.root.protocol("WM_DELETE_WINDOW", self.kilepes_es_mentes)
 
         # Példányváltozók deklarálása a warningok elkerüléséhez
@@ -27,9 +27,23 @@ class RepulojegyApp:
         self.utas_nev_entry: Optional[tk.Entry] = None
         self.foglalas_listbox: Optional[tk.Listbox] = None
         self.szurt_jaratok: List[Jarat] = []
-
+        self.foglalas_kereso_var: Optional[tk.StringVar] = None
+        self.foglalas_kereso_entry: Optional[tk.Entry] = None
         self.gui_felepitese()
         self.lista_frissitese()
+
+    def foglalasok_szurese(self, *args):
+        if not self.foglalas_listbox or not self.foglalas_kereso_var: return
+
+        kereso_kifejezes = self.foglalas_kereso_var.get().lower()
+        self.foglalas_listbox.delete(0, tk.END)
+
+        for f in self.tarsasag.foglalasok:
+            foglalas_szoveg = f"[{f.foglalas_id}] {f.utas_neve} - {f.jarat.jaratszam} ({f.jarat.datum})"
+
+            # Ha a keresőszó benne van a generált szövegben (vagy a mező üres), hozzáadjuk a listához
+            if kereso_kifejezes in foglalas_szoveg.lower():
+                self.foglalas_listbox.insert(tk.END, foglalas_szoveg)
 
     def gui_felepitese(self):
         menu_bar = tk.Frame(self.root)
@@ -56,25 +70,36 @@ class RepulojegyApp:
         tk.Button(foglalas_frame, text="Jegy foglalása", command=self.jegy_foglalasa, bg="#d4edda").pack(side="left",
                                                                                                          padx=5)
 
+        # -- Foglalások --
         lista_frame = tk.LabelFrame(self.root, text="Aktuális foglalások")
         lista_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # ---Keresőmező ---
+        kereso_frame = tk.Frame(lista_frame)
+        kereso_frame.pack(fill="x", padx=5, pady=5)
+        tk.Label(kereso_frame, text="Szűrés (név, járat, stb.):").pack(side="left")
+
+        self.foglalas_kereso_var = tk.StringVar()
+        self.foglalas_kereso_var.trace_add("write", self.foglalasok_szurese)  # Gépeléskor azonnal szűr
+
+        self.foglalas_kereso_entry = tk.Entry(kereso_frame, textvariable=self.foglalas_kereso_var)
+        self.foglalas_kereso_entry.pack(side="left", fill="x", expand=True, padx=5)
+        # --- /keresőmező ---
+
         self.foglalas_listbox = tk.Listbox(lista_frame)
         self.foglalas_listbox.pack(fill="both", expand=True, padx=5, pady=5)
 
         tk.Button(self.root, text="Kiválasztott foglalás lemondása", command=self.foglalas_lemondasa, fg="red").pack(
             pady=5)
 
+    # szűrt lista frissítése
     def lista_frissitese(self):
         if self.datum_szuro and self.foglalas_listbox:
             datumok = sorted(list(set([j.datum for j in self.tarsasag.jaratok])))
             self.datum_szuro['values'] = ["Összes"] + datumok
             if not self.datum_szuro.get(): self.datum_szuro.current(0)
             self.jaratok_szurese()
-
-            self.foglalas_listbox.delete(0, tk.END)
-            for f in self.tarsasag.foglalasok:
-                self.foglalas_listbox.insert(tk.END,
-                                             f"[{f.foglalas_id}] {f.utas_neve} - {f.jarat.jaratszam} ({f.jarat.datum})")
+            self.foglalasok_szurese()
 
     def jaratok_szurese(self, _event=None):
         if self.jarat_listbox and self.datum_szuro:
