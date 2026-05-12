@@ -49,6 +49,8 @@ class RepulojegyApp:
         menu_bar = tk.Frame(self.root)
         menu_bar.pack(fill="x", padx=10, pady=5)
         tk.Button(menu_bar, text="💾 Adatok mentése", command=self.manualis_mentes, bg="#e1e1e1").pack(side="right")
+        # új járat
+        tk.Button(menu_bar, text="➕ Új járat", command=self.uj_jarat_ablak, bg="#e1e1e1").pack(side="right", padx=5)
 
         szuro_frame = tk.LabelFrame(self.root, text="Járat keresése dátum szerint")
         szuro_frame.pack(fill="x", padx=10, pady=5)
@@ -109,6 +111,97 @@ class RepulojegyApp:
             for j in self.szurt_jaratok:
                 self.jarat_listbox.insert(tk.END, str(j))
 
+    def uj_jarat_ablak(self):
+        ablak = tk.Toplevel(self.root)
+        ablak.title("Új járat felvitele")
+        ablak.geometry("350x450")
+        ablak.grab_set()  # Fókusz az új ablakon marad
+
+        mezok = {}
+
+        tk.Label(ablak, text="Járat neve/száma:").pack(pady=(10, 0))
+        mezok['Járat neve'] = tk.Entry(ablak)
+        mezok['Járat neve'].pack()
+
+        tk.Label(ablak, text="Típus:").pack()
+        tipus_combo = ttk.Combobox(ablak, values=["Belföldi", "Nemzetközi"], state="readonly")
+        tipus_combo.pack()
+        mezok['Típus'] = tipus_combo
+
+        tk.Label(ablak, text="Honnan:").pack()
+        mezok['Honnan'] = tk.Entry(ablak)
+        mezok['Honnan'].pack()
+
+        tk.Label(ablak, text="Hova:").pack()
+        mezok['Hova'] = tk.Entry(ablak)
+        mezok['Hova'].pack()
+
+        tk.Label(ablak, text="Távolság (km):").pack()
+        mezok['Távolság'] = tk.Entry(ablak)
+        mezok['Távolság'].pack()
+
+        tk.Label(ablak, text="Indulási idő (ÉÉÉÉ-HH-NN ÓÓ:PP):").pack()
+        mezok['Indulási idő'] = tk.Entry(ablak)
+        mezok['Indulási idő'].insert(0, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        mezok['Indulási idő'].pack()
+
+        tk.Label(ablak, text="Jegyár (HUF):").pack()
+        mezok['Jegyár'] = tk.Entry(ablak)
+        mezok['Jegyár'].pack()
+
+        def jarat_mentese():
+            # 1. Üres mezők ellenőrzése
+            hianyzo_adatok = []
+            ertekek = {}
+            for nev, widget in mezok.items():
+                ertek = widget.get().strip()
+                if not ertek:
+                    hianyzo_adatok.append(nev)
+                ertekek[nev] = ertek
+
+            if hianyzo_adatok:
+                hianyzo_str = "\n- ".join(hianyzo_adatok)
+                messagebox.showerror("Hiányzó adat", f"A következő adatok hiányoznak:\n- {hianyzo_str}", parent=ablak)
+                return
+
+            # 2. Számformátumok validálása
+            try:
+                tavolsag = int(ertekek['Távolság'])
+                ar = int(ertekek['Jegyár'])
+            except ValueError:
+                messagebox.showerror("Hiba", "A távolság és a jegyár csak szám lehet!", parent=ablak)
+                return
+
+            # 3. Dátum/Idő validálása (Érvénytelen dátum/idő ellenőrzés)
+            try:
+                dt = datetime.strptime(ertekek['Indulási idő'], "%Y-%m-%d %H:%M")
+                datum_str = dt.strftime("%Y-%m-%d")
+                idopont_str = dt.strftime("%H:%M")
+            except ValueError:
+                messagebox.showerror("Hiba", "Érvénytelen dátum/idő!\nA helyes formátum: ÉÉÉÉ-HH-NN ÓÓ:PP",
+                                     parent=ablak)
+                return
+
+            # 4. Objektum létrehozása és mentése
+            if ertekek['Típus'] == "Belföldi":
+                uj_jarat = BelfoldiJarat(ertekek['Járat neve'], ertekek['Honnan'], ertekek['Hova'],
+                                         tavolsag, datum_str, idopont_str, ar)
+            else:
+                uj_jarat = NemzetkoziJarat(ertekek['Járat neve'], ertekek['Honnan'], ertekek['Hova'],
+                                           tavolsag, datum_str, idopont_str, ar)
+
+            self.tarsasag.jarat_hozzaadasa(uj_jarat)
+
+            # OK gombra azonnal CSV-be ment
+            mentes_csv_be(self.tarsasag)
+
+            # Listák frissítése a főablakon
+            self.lista_frissitese()
+
+            messagebox.showinfo("Siker", "Járat sikeresen felvéve és mentve!", parent=ablak)
+            ablak.destroy()
+
+        tk.Button(ablak, text="OK", command=jarat_mentese, bg="#d4edda", width=15).pack(pady=15)
     def jegy_foglalasa(self):
         if not self.jarat_listbox or not self.utas_nev_entry: return
         try:
