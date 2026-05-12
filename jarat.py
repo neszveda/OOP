@@ -8,9 +8,14 @@ class Jarat(ABC):
         self.__honnan = honnan
         self.__hova = hova
         self.__tavolsag = tavolsag
-        self.__datum = datum
-        self.__idopont = idopont
-        self.__jegyar = jegyar
+#        self.__datum = datum
+#        self.__idopont = idopont
+#        self.__jegyar = jegyar
+
+        # A közvetlen értékadás helyett a settereket hívjuk meg, így lefut a validáció
+        self.datum = datum
+        self.idopont = idopont
+        self.jegyar = jegyar
 
     @property
     def jaratszam(self) -> str: return self.__jaratszam
@@ -36,6 +41,29 @@ class Jarat(ABC):
     @property
     def indulas_ideje(self) -> datetime:
         return datetime.strptime(f"{self.__datum} {self.__idopont}", "%Y-%m-%d %H:%M")
+
+    @jegyar.setter
+    def jegyar(self, uj_ar: int):
+        if uj_ar <= 0:
+            raise ValueError("A jegyár csak pozitív szám lehet!")
+        self.__jegyar = uj_ar
+
+    @datum.setter
+    def datum(self, uj_datum: str):
+        try:
+            # Csak akkor engedi beállítani, ha a formátum helyes
+            datetime.strptime(uj_datum, "%Y-%m-%d")
+            self.__datum = uj_datum
+        except ValueError:
+            raise ValueError("A dátum formátuma érvénytelen! Helyes formátum: ÉÉÉÉ-HH-NN")
+
+    @idopont.setter
+    def idopont(self, uj_idopont: str):
+        try:
+            datetime.strptime(uj_idopont, "%H:%M")
+            self.__idopont = uj_idopont
+        except ValueError:
+            raise ValueError("Az időpont formátuma érvénytelen! Helyes formátum: ÓÓ:PP")
 
     @abstractmethod
     def __str__(self) -> str:
